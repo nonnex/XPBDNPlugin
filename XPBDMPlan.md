@@ -79,7 +79,7 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
     - [ ] 4.5.1. Set up Chaos Cloth for a clothing mesh, driven by Niagara.
     - [ ] 4.5.2. Add GPU collision pass in `XPBDCompute.hlsl` between cloth and XPBD body.
     - [ ] 4.5.3. Test cloth-body interaction, optimize for 60 FPS.
-  - [ ] 4.6. **Prototype ray tracing-based collision using Nanite’s dynamic geometries**
+  - [ ] 4.6. **(Experiment) Prototype ray tracing-based collision using Nanite’s dynamic geometries**
     - [ ] 4.6.1. Build `FRayTracingGeometry` from Nanite clusters (needs `NaniteSceneProxy.cpp`).
     - [ ] 4.6.2. Dispatch ray tracing shader via `FRHICommandList`, cast rays from XPBD verts.
     - [ ] 4.6.3. Compare performance (~5 ms?) vs. cluster approach, decide viability.
