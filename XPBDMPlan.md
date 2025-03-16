@@ -26,17 +26,31 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
     - [x] 1.2.3. Rebuild, test Editor recognizes plugin without errors.
   - [x] 1.3. **Set up folder structure**
     - [x] 1.3.1. Create `Source/XPBDNPlugin/Public` and `Private` folders.
-    - [x] 1.3.2. Add `Config` folder with empty `DefaultXPBDNPlugin.ini`.
+    - [x] 1.3.2. Add `Config` folder with `DefaultXPBDNPlugin.ini` (updated with initial settings).
     - [x] 1.3.3. Verify structure in VS, rebuild to ensure no path errors.
+  - [x] 1.4. **Implement smart logging system**
+    - [x] 1.4.1. Add custom log category `LogXPBDNPlugin` in `XPBDNPlugin.h`.
+    - [x] 1.4.2. Define logging macros (`XPBDN_LOG_INFO`, etc.) in `XPBDNPlugin.h`.
+    - [x] 1.4.3. Implement log category in `XPBDNPlugin.cpp`, test with initialization log.
+  - [x] 1.5. **Enhance configuration support**
+    - [x] 1.5.1. Add initial settings to `DefaultXPBDNPlugin.ini` (e.g., `LogVerbosity`).
+    - [x] 1.5.2. Read configuration in `XPBDNPlugin.cpp` and log the verbosity setting.
+  - [x] 1.6. **Create a simple test scene**
+    - [x] 1.6.1. Add placeholder `UXPBDNComponent.h/.cpp` with logging in `BeginPlay`.
+    - [x] 1.6.2. Attach to a test actor in the Editor, verify log output.
+  - [x] 1.7. **Resolve build issues with `FXPBDNMeshData`**
+    - [x] 1.7.1. Separate `FXPBDNMeshData` into `XPBDNMeshData.h` with `XPBDNPLUGIN_API`.
+    - [x] 1.7.2. Move `#include "XPBDNMeshData.generated.h"` to top of file for UE 5.5.4 compatibility.
+    - [x] 1.7.3. Update `XPBDNMuscleSolver.h/.cpp` to include `XPBDNMeshData.h`, rebuild successfully.
 
 - [ ] 2. **Implement XPBD solver for muscle simulation**
   - [ ] 2.1. **Define lightweight surface constraints (distance, shape-matching) in `XPBDNMuscleSolver.h/.cpp`**
-    - [ ] 2.1.1. Create `XPBDNMuscleSolver.h` with `TArray<FVector> Positions`, `TArray<int32> Constraints`.
+    - [x] 2.1.1. Create `XPBDNMuscleSolver.h` with `TArray<FVector> Positions`, `TArray<int32> Constraints` (moved to `XPBDNMeshData.h`).
     - [ ] 2.1.2. Implement distance constraint solver in `.cpp` (e.g., `SolveDistanceConstraint`).
     - [ ] 2.1.3. Add shape-matching logic (e.g., `ComputeShapeMatchGoal`), test with dummy data.
     - [ ] 2.1.4. Build, log results with `UE_LOG` to verify constraint behavior.
   - [ ] 2.2. **Create HLSL compute shader (`XPBDCompute.hlsl`) for GPU-accelerated constraint solving**
-    - [ ] 2.2.1. Define shader with `RWStructuredBuffer<float3>` for positions, `StructuredBuffer<int2>` for constraints.
+    - [x] 2.2.1. Define shader with `RWStructuredBuffer<float3>` for positions (placeholder implemented).
     - [ ] 2.2.2. Implement XPBD iteration (e.g., `ComputeCorrection`), compile with `FShaderCompiler`.
     - [ ] 2.2.3. Test shader dispatch in `XPBDNMuscleSolver.cpp` using `FRHICommandList`.
   - [ ] 2.3. **Test solver with a simple skeletal mesh (e.g., 10k verts, 50 clusters)**
@@ -66,7 +80,7 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
   - [ ] 4.2. **Test collision with a simple scene (e.g., sphere vs. floor)**
     - [ ] 4.2.1. Create scene with cube (soft body) and floor (static).
     - [ ] 4.2.2. Run simulation, log collision points, tweak stiffness.
- - [ ] 4.3. **Implement GPU-accelerated XPBD collision clusters using compute shaders**
+  - [ ] 4.3. **Implement GPU-accelerated XPBD collision clusters using compute shaders**
     - [ ] 4.3.1. Create UAV buffers for XPBD positions and collision clusters using `FRHIBufferCreateDesc`.
     - [ ] 4.3.2. Extend `XPBDCompute.hlsl` with broad-phase (spatial hash) and narrow-phase collision.
     - [ ] 4.3.3. Dispatch via `FRHIComputeCommandList` with `RHIDispatchComputeShader`, target ~1-3 ms/actor.
@@ -157,34 +171,37 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
   - Async buffers minimize CPU-GPU synchronization, ensuring smooth updates.
   - Collision detection integrates with XPBD constraints for basic response.
 
+- **Notes**:
+  - In Unreal Engine 5.5.4 (binary installation), the generated header for `USTRUCT()` types (e.g., `XPBDNMeshData.generated.h`) must be included *before* the `USTRUCT()` declaration in the header file (e.g., at the top of `XPBDNMeshData.h`). This deviates from prior conventions where it was typically placed at the bottom. This order ensures UHT processes the reflection data correctly and avoids build errors like `C4430` and `C2039`.
+
 - **File Structure**:
 ```
  XPBDNPlugin/
   ├── Config/
-  │   └── DefaultXPBDNPlugin.ini
+  │   └── DefaultXPBDNPlugin.ini  (updated with initial settings)
   ├── Source/
   │   └── XPBDNPlugin/
-  │       ├── Public/
-  │           ├── XPBDNPlugin.h
-  │       │   ├── XPBDNComponent.h
-  │       │   ├── XPBDNMuscleSolver.h
-  │       │   ├── XPBDNConstraint.h
-  │       │   ├── XPBDNDistanceConstraint.h
-  │       │   ├── XPBDNShaderManager.h
-  │       │   ├── XPBDNMeshData.h
-  │       │   ├── XPBDNBlueprintLibrary.h
-  │       │   └── XPBDNTestSuite.h
+  │       └── Public/
+  │           ├── XPBDNPlugin.h  (updated with logging)
+  │           ├── XPBDNComponent.h  (new)
+  │           ├── XPBDNMuscleSolver.h  (new, placeholder)
+  │           ├── XPBDNMeshData.h  (new, with generated include at top)
+  │           ├── XPBDNConstraint.h
+  │           ├── XPBDNDistanceConstraint.h
+  │           ├── XPBDNShaderManager.h
+  │           ├── XPBDNBlueprintLibrary.h
+  │           └── XPBDNTestSuite.h
   │       └── Private/
-  │           ├── XPBDNPlugin.cpp
-  │           ├── XPBDNComponent.cpp
-  │           ├── XPBDNMuscleSolver.cpp
+  │           ├── XPBDNPlugin.cpp  (updated with logging and config)
+  │           ├── XPBDNComponent.cpp  (new)
+  │           ├── XPBDNMuscleSolver.cpp  (new, placeholder)
   │           ├── XPBDNConstraint.cpp
   │           ├── XPBDNDistanceConstraint.cpp
   │           ├── XPBDNShaderManager.cpp
   │           ├── XPBDNBlueprintLibrary.cpp
   │           └── XPBDNTestSuite.cpp
   ├── Shaders/
-  │   ├── XPBDCompute.hlsl
+  │   ├── XPBDCompute.hlsl  (new, placeholder)
   │   └── SkinNanite.hlsl
   └── XPBDNPlugin.uplugin
 ```
