@@ -9,6 +9,7 @@ struct XPBDNPLUGIN_API FXPBDNMeshData
 {
     GENERATED_BODY()
 
-    TArray<FVector> Positions;
-    TArray<int32> Constraints;  // Pairs or indices defining constraints
+    TArray<FVector> Positions;         // Current positions
+    TArray<FVector> RestPositions;     // Original rest positions for shape-matching
+    TArray<int32> Constraints;         // Pairs or indices defining distance constraints
 };

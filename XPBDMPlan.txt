@@ -44,19 +44,22 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
     - [x] 1.7.2. Move `#include "XPBDNMeshData.generated.h"` to top of file for UE 5.5.4 compatibility.
     - [x] 1.7.3. Update `XPBDNMuscleSolver.h/.cpp` to include `XPBDNMeshData.h`, rebuild successfully.
 
-- [ ] 2. **Implement XPBD solver for muscle simulation**
-  - [x] 2.1. **Define lightweight surface constraints (distance, shape-matching) in `XPBDNMuscleSolver.h/.cpp`**
-    - [x] 2.1.1. Create `XPBDNMuscleSolver.h` with `TArray<FVector> Positions`, `TArray<int32> Constraints` (moved to `XPBDNMeshData.h`).
-    - [x] 2.1.2. Implement distance constraint solver in `.cpp` (e.g., `SolveDistanceConstraint`).
-    - [x] 2.1.3. Add shape-matching logic (e.g., `ComputeShapeMatchGoal`), test with dummy data.
-    - [x] 2.1.4. Build, log results with `UE_LOG` to verify constraint behavior.
-  - [ ] 2.2. **Create HLSL compute shader (`XPBDCompute.hlsl`) for GPU-accelerated constraint solving**
-    - [x] 2.2.1. Define shader with `RWStructuredBuffer<float3>` for positions (implemented as `XPBDCompute.usf`).
-    - [x] 2.2.2. Implement XPBD iteration (e.g., `ComputeCorrection`), compile with `FShaderCompiler`.
-      - Status: Implemented in `XPBDCompute.usf` at `Shaders/`; virtual path updated to `/Plugins/XPBDNPlugin/Shaders/`; CPU fallback for robustness.
-    - [ ] 2.2.3. Test shader dispatch in `XPBDNMuscleSolver.cpp` using RDG and `FRHICommandList`.
-      - Status: Path mismatch resolved; runtime validation pending with shader in `Shaders/`.
-  - [ ] 2.3. **Test solver with a simple skeletal mesh (e.g., 10k verts, 50 clusters)**
+- [ ] 2. **implement xpbd solver for muscle simulation**
+  - [x] 2.1. **define lightweight surface constraints (distance, shape-matching) in `xpbdnmusclesolver.h/.cpp`**
+    - [x] 2.1.1. create `xpbdnmusclesolver.h` with `tarray<fvector> positions`, `tarray<int32> constraints` (moved to `xpbdnmeshdata.h`).
+    - [x] 2.1.2. implement distance constraint solver in `.cpp` (e.g., `solvedistanceconstraint`).
+    - [x] 2.1.3. add shape-matching logic (e.g., `computeshapematchgoal`), test with dummy data.
+    - [x] 2.1.4. build, log results with `ue_log` to verify constraint behavior.
+  - [ ] 2.2. **create hlsl compute shader (`xpbdcompute.hlsl`) for gpu-accelerated constraint solving**
+    - [x] 2.2.1. define shader with `rwstructuredbuffer<float3>` for positions (implemented as `xpbdcompute.usf`).
+    - [ ] 2.2.2. implement xpbd iteration (e.g., `computecorrection`), compile with `fshadercompiler`.
+      - status: basic implementation in `xpbdcompute.usf`; pending full validation.
+    - [ ] 2.2.3. test shader dispatch in `xpbdnmusclesolver.cpp` using rdg and `frhicommandlist`.
+      - status: in progress—build now includes `xpbdn_log_verbose` in `xpbdnplugin.h`; `xpbdcompute.usf` added; runtime pending validation.
+  - [ ] 2.3. **test solver with a simple skeletal mesh (e.g., 10k verts, 50 clusters)**
+    - [ ] 2.3.1. create test mesh (e.g., cube with 10k verts) in editor.
+    - [ ] 2.3.2. apply solver, check deformation visually and via logs.
+    - [ ] 2.3.3. add nullptr checks (e.g., `if (!mesh) return;`), rebuild, test edge cases.
 
 - [ ] 3. **Buffer Management for XPBD Simulation**
   - [ ] 3.1. **Implement RDG buffer creation and upload**
@@ -287,22 +290,10 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
 - **TRefCountPtr**: Used for `FRDGPooledBuffer` (e.g., `PositionsPooledBuffer`).
   - **No `Reset()`**: Use `= nullptr` to clear; `IsValid()` to check.
   - Differs from `TSharedPtr`—see `Templates/RefCounting.h`.
+
 - **Module Dependencies**:
   - `"RenderCore"` for RDG; `"Renderer"` may not expose `ComputeShaderUtils.h`.
 - **Readback**: Use `QueueBufferExtraction` with `TRefCountPtr<FRDGPooledBuffer>`, then `FRHIGPUBufferReadback::EnqueueCopy`.
-- **Shader Robustness**:
-  - Missing `.usf` (e.g., `XPBDCompute.usf`) crashes at `ShaderCore.cpp:2528`—no engine fallback.
-  - Check with `FPaths::FileExists(FPaths::ProjectPluginsDir() / TEXT("XPBDNPlugin/XPBDCompute.usf"))` at init.
-  - Add CPU fallback (e.g., `SolveDistanceConstraint`) to keep plugin functional if GPU shader fails.
-- - **Shader File Location**:
-  - Current: `Plugins/XPBDNPlugin/Shaders/XPBDCompute.usf`—virtual path must be `/Plugins/XPBDNPlugin/Shaders/XPBDCompute.usf` in `IMPLEMENT_GLOBAL_SHADER`.
-  - Alternative: Plugin root (`Plugins/XPBDNPlugin/`)—simpler but less organized.
-  - Subfolders require exact virtual path match—case-sensitive on some platforms (e.g., macOS).
-- **Fail-Safe**:
-  - Missing `.usf` crashes at `ShaderCore.cpp:2528`—use `FPaths::FileExists` at init to toggle GPU/CPU mode.
-  - Example: `FString ShaderPath = FPaths::ProjectPluginsDir() / TEXT("XPBDNPlugin/Shaders/XPBDCompute.usf"); bUseGPU = FPaths::FileExists(ShaderPath);`
-- - **Buffer Management**:
-  - Previous "nasty buffer thing" resolved—`FRDGBuffer` creation and readback with `FRHIGPUBufferReadback` now stable; no nullptr issues remain.
 
 ### Build Issues
 - **Latest Fix**: `TRefCountPtr<FRDGPooledBuffer>::Reset()` is invalid; replaced with assignment to `nullptr`.

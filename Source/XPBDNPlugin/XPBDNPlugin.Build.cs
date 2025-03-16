@@ -1,54 +1,26 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
+// XPBDNPlugin.Build.cs
 using UnrealBuildTool;
 
 public class XPBDNPlugin : ModuleRules
 {
-	public XPBDNPlugin(ReadOnlyTargetRules Target) : base(Target)
-	{
-		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-		
-		PublicIncludePaths.AddRange(
-			new string[] {
-				// ... add public include paths required here ...
-			}
-			);
-				
-		
-		PrivateIncludePaths.AddRange(
-			new string[] {
-				// ... add other private include paths required here ...
-			}
-			);
-			
-		
-		PublicDependencyModuleNames.AddRange(
-			new string[]
-			{
-				"Core",
-				// ... add other public dependencies that you statically link with here ...
-			}
-			);
-			
-		
-		PrivateDependencyModuleNames.AddRange(
-			new string[]
-			{
-				"CoreUObject",
-				"Engine",
-				"Slate",
-				"SlateCore",
-				// ... add private dependencies that you statically link with here ...	
-				"RenderCore",
-			}
-			);
-		
-		
-		DynamicallyLoadedModuleNames.AddRange(
-			new string[]
-			{
-				// ... add any modules that your module loads dynamically here ...
-			}
-			);
-	}
+    public XPBDNPlugin(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+
+        PublicDependencyModuleNames.AddRange(new string[]
+        {
+            "Core",
+            "CoreUObject", // For UObject, UPackage
+            "Engine",      // For UActorComponent
+            "RenderCore",  // For RDG
+            "Renderer",    // For shader utils
+            "RHI"          // For FRHICommandList, FRHIGPUBufferReadback
+            // "ShaderCore" removed - deprecated in 5.5.4
+        });
+
+        PrivateDependencyModuleNames.AddRange(new string[]
+        {
+            // Add private dependencies if needed
+        });
+    }
 }

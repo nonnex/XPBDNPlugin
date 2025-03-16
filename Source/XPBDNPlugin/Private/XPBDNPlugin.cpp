@@ -9,15 +9,16 @@ void FXPBDNPluginModule::StartupModule()
     // Log a test message during plugin initialization
     XPBDN_LOG_INFO("XPBDNPlugin initialized successfully!");
 
-    // Read configuration example
+    // Explicitly load from the plugin's DefaultXPBDNPlugin.ini
+    FString ConfigPath = FPaths::Combine(FPaths::ProjectPluginsDir(), TEXT("XPBDNPlugin/Config/DefaultXPBDNPlugin.ini"));
     FString Verbosity;
-    if (GConfig->GetString(TEXT("XPBDNPlugin"), TEXT("LogVerbosity"), Verbosity, GGameIni))
+    if (GConfig->GetString(TEXT("XPBDNPlugin"), TEXT("LogVerbosity"), Verbosity, ConfigPath))
     {
         XPBDN_LOG_INFO("Log verbosity set to: %s", *Verbosity);
     }
     else
     {
-        XPBDN_LOG_WARNING("LogVerbosity not found in config.");
+        XPBDN_LOG_WARNING("LogVerbosity not found in config at: %s", *ConfigPath);
     }
 }
 

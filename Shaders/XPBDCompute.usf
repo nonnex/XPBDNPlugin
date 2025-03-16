@@ -1,0 +1,37 @@
+// Plugins/XPBDNPlugin/Shaders/XPBDCompute.usf
+RWStructuredBuffer<float3> Positions : register(u0);
+StructuredBuffer<int2> Constraints : register(t0);
+StructuredBuffer<float> RestDistances : register(t1);
+
+cbuffer Parameters : register(b0)
+{
+    float Stiffness;
+    float DeltaTime;
+    uint NumConstraints;
+    uint NumParticles;
+};
+
+[numthreads(64, 1, 1)]
+void CSMain(uint3 DTid : SV_DispatchThreadID)
+{
+    uint ConstraintIdx = DTid.x;
+    if (ConstraintIdx >= NumConstraints)
+        return;
+
+    int2 Constraint = Constraints[ConstraintIdx];
+    float RestDistance = RestDistances[ConstraintIdx];
+
+    float3 P1 = Positions[Constraint.x];
+    float3 P2 = Positions[Constraint.y];
+    float3 Delta = P2 - P1;
+    float CurrentDistance = length(Delta);
+
+    if (CurrentDistance > 0.0f)
+    {
+        float Correction = (CurrentDistance - RestDistance) * Stiffness * DeltaTime;
+        float3 CorrectionVector = normalize(Delta) * (Correction * 0.5f);
+        
+        Positions[Constraint.x] -= CorrectionVector;
+        Positions[Constraint.y] += CorrectionVector;
+    }
+}
