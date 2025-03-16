@@ -15,169 +15,115 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
 
 ## Tasks
 
-1. [ ] **Setup basic project structure for Unreal Engine 5.5.4 plugin**
+- [ ] 1. **Setup basic project structure for Unreal Engine 5.5.4 plugin**
+  - [ ] 1.1. **Create new plugin project named `XPBDNPlugin` in UE 5.5.4**
+    - [ ] 1.1.1. Launch UE 5.5.4 Editor, select “New Plugin” → “Blank Plugin”.
+    - [ ] 1.1.2. Name it `XPBDNPlugin`, save to repo folder (e.g., `XPBDNPlugin/Plugins/XPBDNPlugin`).
+    - [ ] 1.1.3. Build and compile in Visual Studio, verify plugin loads in Editor.
+  - [ ] 1.2. **Configure `.uplugin` file with dependencies (Core, Engine, RenderCore, Nanite)**
+    - [ ] 1.2.1. Edit `XPBDNPlugin.uplugin`, add `"Modules": [{ "Name": "XPBDNPlugin", "Type": "Runtime" }]`.
+    - [ ] 1.2.2. Add dependencies: `"Dependencies": ["Core", "Engine", "RenderCore", "Nanite"]`.
+    - [ ] 1.2.3. Rebuild, test Editor recognizes plugin without errors.
+  - [ ] 1.3. **Set up folder structure**
+    - [ ] 1.3.1. Create `Source/XPBDNPlugin/Public` and `Private` folders.
+    - [ ] 1.3.2. Add `Config` folder with empty `DefaultXPBDNPlugin.ini`.
+    - [ ] 1.3.3. Verify structure in VS, rebuild to ensure no path errors.
 
-   1.1 [ ] **Create new plugin project named `XPBDNPlugin` in UE 5.5.4**
+- [ ] 2. **Implement XPBD solver for muscle simulation**
+  - [ ] 2.1. **Define lightweight surface constraints (distance, shape-matching) in `XPBDNMuscleSolver.h/.cpp`**
+    - [ ] 2.1.1. Create `XPBDNMuscleSolver.h` with `TArray<FVector> Positions`, `TArray<int32> Constraints`.
+    - [ ] 2.1.2. Implement distance constraint solver in `.cpp` (e.g., `SolveDistanceConstraint`).
+    - [ ] 2.1.3. Add shape-matching logic (e.g., `ComputeShapeMatchGoal`), test with dummy data.
+    - [ ] 2.1.4. Build, log results with `UE_LOG` to verify constraint behavior.
+  - [ ] 2.2. **Create HLSL compute shader (`XPBDCompute.hlsl`) for GPU-accelerated constraint solving**
+    - [ ] 2.2.1. Define shader with `RWStructuredBuffer<float3>` for positions, `StructuredBuffer<int2>` for constraints.
+    - [ ] 2.2.2. Implement XPBD iteration (e.g., `ComputeCorrection`), compile with `FShaderCompiler`.
+    - [ ] 2.2.3. Test shader dispatch in `XPBDNMuscleSolver.cpp` using `FRHICommandList`.
+  - [ ] 2.3. **Test solver with a simple skeletal mesh (e.g., 10k verts, 50 clusters)**
+    - [ ] 2.3.1. Create test mesh (e.g., cube with 10k verts) in Editor.
+    - [ ] 2.3.2. Apply solver, check deformation visually and via logs.
+    - [ ] 2.3.3. Add nullptr checks (e.g., `if (!Mesh) return;`), rebuild, test edge cases.
 
-      1.1.1. [ ] Launch UE 5.5.4 Editor, select “New Plugin” → “Blank Plugin”.
-      1.1.2. [ ] Name it `XPBDNPlugin`, save to repo folder (e.g., `XPBDNPlugin/Plugins/XPBDNPlugin`).
-      1.1.3. [ ] Build and compile in Visual Studio, verify plugin loads in Editor.
+- [ ] 3. **Integrate soft body component with Unreal Engine**
+  - [ ] 3.1. **Create `UXPBDNComponent` (subclass of `USkeletalMeshComponent`) to manage XPBD and Nanite integration**
+    - [ ] 3.1.1. Subclass `USkeletalMeshComponent` in `XPBDNComponent.h`.
+    - [ ] 3.1.2. Add `UPROPERTY` for `FXPBDNMuscleSolver* Solver`, initialize in `.cpp`.
+    - [ ] 3.1.3. Build, attach to a test actor, verify in Editor.
+  - [ ] 3.2. **Add properties for cluster count, stiffness, displacement strength, and morph blending**
+    - [ ] 3.2.1. Define `int32 ClusterCount`, `float Stiffness`, `float DisplacementStrength` with `UPROPERTY(EditAnywhere)`.
+    - [ ] 3.2.2. Add `float MorphBlendWeight` with `UPROPERTY(EditAnywhere, Meta = (ClampMin = "0.0", ClampMax = "1.0"))` for morph target blending.
+    - [ ] 3.2.3. Add default values (e.g., `ClusterCount = 50`, `MorphBlendWeight = 1.0`), rebuild, check in Details panel.
+  - [ ] 3.3. **Implement `TickComponent` to dispatch XPBD compute and update Nanite mesh**
+    - [ ] 3.3.1. Override `TickComponent`, call `Solver->Solve()` if valid.
+    - [ ] 3.3.2. Dispatch `XPBDCompute.hlsl`, update mesh positions with morph blending applied.
+    - [ ] 3.3.3. Add nullptr check (`if (!Solver) return;`), test with logging.
 
-   1.2. [ ] **Configure `.uplugin` file with dependencies (Core, Engine, RenderCore, Nanite)**
+- [ ] 4. **Add collision detection and response**
+  - [ ] 4.1. **Implement basic vertex-based collision constraints in XPBD (e.g., against bones or static objects)**
+    - [ ] 4.1.1. Add `TArray<FVector> CollisionNormals` to `XPBDNMuscleSolver`.
+    - [ ] 4.1.2. Implement collision constraint (e.g., push vertices above plane), test with static floor.
+    - [ ] 4.1.3. Build, verify collision via debug draw.
+  - [ ] 4.2. **Test collision with a simple scene (e.g., sphere vs. floor)**
+    - [ ] 4.2.1. Create scene with cube (soft body) and floor (static).
+    - [ ] 4.2.2. Run simulation, log collision points, tweak stiffness.
+  - [ ] 4.3. **Explore GPU-accelerated collision queries using Nanite data (future optimization)**
+    - [ ] 4.3.1. Research Nanite’s BVH access (if exposed in 5.5.4).
+    - [ ] 4.3.2. Prototype compute shader for collision queries (future task).
 
-      1.2.1. [ ] Edit `XPBDNPlugin.uplugin`, add `"Modules": [{ "Name": "XPBDNPlugin", "Type": "Runtime" }]`.
-      1.2.2. [ ] Add dependencies: `"Dependencies": ["Core", "Engine", "RenderCore", "Nanite"]`.
-      1.2.3. [ ] Rebuild, test Editor recognizes plugin without errors.
+- [ ] 5. **Optimize simulation performance**
+  - [ ] 5.1. **Reduce constraint count via clustering (e.g., 50-100 clusters per actor)**
+    - [ ] 5.1.1. Implement clustering algorithm in `XPBDNMuscleSolver` (e.g., k-means on vertices).
+    - [ ] 5.1.2. Limit to 50-100 clusters, test deformation quality.
+  - [ ] 5.2. **Implement async compute buffers to minimize CPU-GPU sync**
+    - [ ] 5.2.1. Use `FRWBuffer` for positions, double-buffer for async updates.
+    - [ ] 5.2.2. Integrate with `FRHICommandList`, test sync-free performance.
+  - [ ] 5.3. **Profile and tune for ~1-3 ms per actor on RTX 3060**
+    - [ ] 5.3.1. Use NVIDIA Nsight to measure compute time (~1-3 ms goal).
+    - [ ] 5.3.2. Adjust cluster count and iterations, log results.
 
-   1.3. [ ] **Set up folder structure**
+- [ ] 6. **Expose simulation parameters to Blueprints**
+  - [ ] 6.1. **Add `UPROPERTY` for stiffness, cluster size, and displacement strength in `UXPBDNComponent`**
+    - [ ] 6.1.1. Extend `UXPBDNComponent` with Blueprint-readable properties.
+    - [ ] 6.1.2. Test visibility in Blueprint editor.
+  - [ ] 6.2. **Create Blueprint nodes for enabling/disabling simulation and adjusting parameters**
+    - [ ] 6.2.1. Add `UFUNCTION(BlueprintCallable)` for `EnableSimulation`, `SetStiffness`.
+    - [ ] 6.2.2. Build, test node functionality in a Blueprint graph.
+  - [ ] 6.3. **Test Blueprint integration with a sample actor**
+    - [ ] 6.3.1. Create sample actor with `UXPBDNComponent`, adjust params in Blueprint.
+    - [ ] 6.3.2. Verify changes affect simulation, log outcomes.
 
-      1.3.1. [ ] Create `Source/XPBDNPlugin/Public` and `Private` folders.
-      1.3.2. [ ] Add `Config` folder with empty `DefaultXPBDNPlugin.ini`.
-      1.3.3. [ ] Verify structure in VS, rebuild to ensure no path errors.
+- [ ] 7. **Add basic rendering for soft body mesh**
+  - [ ] 7.1. **Enable Nanite support on `SKM_Quinn.fbx` in Skeletal Mesh Editor**
+    - [ ] 7.1.1. Import `SKM_Quinn.fbx`, enable Nanite in Skeletal Mesh Editor.
+    - [ ] 7.1.2. Test rendering with default material, verify LOD.
+  - [ ] 7.2. **Create material with Nanite tessellation and displacement for muscle bulging**
+    - [ ] 7.2.1. Create material (`M_XPBDN_Skin`), enable tessellation and displacement.
+    - [ ] 7.2.2. Add simple displacement (e.g., `BoneWeight * Strength`), test bulging.
+  - [ ] 7.3. **Test rendering performance (~1-3 ms per actor)**
+    - [ ] 7.3.1. Profile with `stat rhi` (~1-3 ms goal).
+    - [ ] 7.3.2. Adjust tessellation factor, log results.
 
-2. [ ] **Implement XPBD solver for muscle simulation**
+- [ ] 8. **Support skeletal mesh deformation**
+  - [ ] 8.1. **Integrate Nanite skeletal animation with XPBD-deformed positions**
+    - [ ] 8.1.1. Link XPBD positions to Nanite mesh in `UXPBDNComponent`.
+    - [ ] 8.1.2. Test with a simple animation clip, verify sync.
+  - [ ] 8.2. **Add vertex mapping from XPBD results to Nanite mesh in `SkinNanite.hlsl`**
+    - [ ] 8.2.1. Define shader with `StructuredBuffer<float3>` for XPBD positions.
+    - [ ] 8.2.2. Map to vertex positions, compile and test.
+  - [ ] 8.3. **Test deformation with animation clips from `SKM_Quinn.fbx`**
+    - [ ] 8.3.1. Apply animation from `SKM_Quinn.fbx`, check muscle/skin behavior.
+    - [ ] 8.3.2. Add logging for vertex offsets, tweak mapping.
 
-   2.1. [ ] **Define lightweight surface constraints (distance, shape-matching) in `XPBDNMuscleSolver.h/.cpp`**
-
-      2.1.1. [ ] Create `XPBDNMuscleSolver.h` with `TArray<FVector> Positions`, `TArray<int32> Constraints`.
-      2.1.2. [ ] Implement distance constraint solver in `.cpp` (e.g., `SolveDistanceConstraint`).
-      2.1.3. [ ] Add shape-matching logic (e.g., `ComputeShapeMatchGoal`), test with dummy data.
-      2.1.4. [ ] Build, log results with `UE_LOG` to verify constraint behavior.
-
-   2.2. [ ] **Create HLSL compute shader (`XPBDCompute.hlsl`) for GPU-accelerated constraint solving**
-
-      2.2.1. [ ] Define shader with `RWStructuredBuffer<float3>` for positions, `StructuredBuffer<int2>` for constraints.
-      2.2.2. [ ] Implement XPBD iteration (e.g., `ComputeCorrection`), compile with `FShaderCompiler`.
-      2.2.3. [ ] Test shader dispatch in `XPBDNMuscleSolver.cpp` using `FRHICommandList`.
-
-   2.3. [ ] **Test solver with a simple skeletal mesh (e.g., 10k verts, 50 clusters)**
-
-      2.3.1. [ ] Create test mesh (e.g., cube with 10k verts) in Editor.
-      2.3.2. [ ] Apply solver, check deformation visually and via logs.
-      2.3.3. [ ] Add nullptr checks (e.g., `if (!Mesh) return;`), rebuild, test edge cases.
-
-3. [ ] **Integrate soft body component with Unreal Engine**
-
-   3.1. [ ] **Create `UXPBDNComponent` (subclass of `USkeletalMeshComponent`) to manage XPBD and Nanite integration**
-
-      3.1.1. [ ] Subclass `USkeletalMeshComponent` in `XPBDNComponent.h`.
-      3.1.2. [ ] Add `UPROPERTY` for `FXPBDNMuscleSolver* Solver`, initialize in `.cpp`.
-      3.1.3. [ ] Build, attach to a test actor, verify in Editor.
-
-   3.2. [ ] **Add properties for cluster count, stiffness, displacement strength, and morph blending**
-
-      3.2.1. [ ] Define `int32 ClusterCount`, `float Stiffness`, `float DisplacementStrength` with `UPROPERTY(EditAnywhere)`.
-      3.2.2. [ ] Add `float MorphBlendWeight` with `UPROPERTY(EditAnywhere, Meta = (ClampMin = "0.0", ClampMax = "1.0"))` for morph target blending.
-      3.2.3. [ ] Add default values (e.g., `ClusterCount = 50`, `MorphBlendWeight = 1.0`), rebuild, check in Details panel.
-
-   3.3. [ ] **Implement `TickComponent` to dispatch XPBD compute and update Nanite mesh**
-
-      3.3.1. [ ] Override `TickComponent`, call `Solver->Solve()` if valid.
-      3.3.2. [ ] Dispatch `XPBDCompute.hlsl`, update mesh positions with morph blending applied.
-      3.3.3. [ ] Add nullptr check (`if (!Solver) return;`), test with logging.
-
-4. [ ] **Add collision detection and response**
-
-   4.1. [ ] **Implement basic vertex-based collision constraints in XPBD (e.g., against bones or static objects)**
-
-      4.1.1. [ ] Add `TArray<FVector> CollisionNormals` to `XPBDNMuscleSolver`.
-      4.1.2. [ ] Implement collision constraint (e.g., push vertices above plane), test with static floor.
-      4.1.3. [ ] Build, verify collision via debug draw.
-
-   4.2. [ ] **Test collision with a simple scene (e.g., sphere vs. floor)**
-
-      4.2.1. [ ] Create scene with cube (soft body) and floor (static).
-      4.2.2. [ ] Run simulation, log collision points, tweak stiffness.
-
-   4.3. [ ] **Explore GPU-accelerated collision queries using Nanite data (future optimization)**
-
-      4.3.1. [ ] Research Nanite’s BVH access (if exposed in 5.5.4).
-      4.3.2. [ ] Prototype compute shader for collision queries (future task).
-
-5. [ ] **Optimize simulation performance**
-
-   5.1. [ ] **Reduce constraint count via clustering (e.g., 50-100 clusters per actor)**
-
-      5.1.1. [ ] Implement clustering algorithm in `XPBDNMuscleSolver` (e.g., k-means on vertices).
-      5.1.2. [ ] Limit to 50-100 clusters, test deformation quality.
-
-   5.2. [ ] **Implement async compute buffers to minimize CPU-GPU sync**
-
-      5.2.1. [ ] Use `FRWBuffer` for positions, double-buffer for async updates.
-      5.2.2. [ ] Integrate with `FRHICommandList`, test sync-free performance.
-
-   5.3. [ ] **Profile and tune for ~1-3 ms per actor on RTX 3060**
-
-      5.3.1. [ ] Use NVIDIA Nsight to measure compute time (~1-3 ms goal).
-      5.3.2. [ ] Adjust cluster count and iterations, log results.
-
-6. [ ] **Expose simulation parameters to Blueprints**
-
-   6.1. [ ] **Add `UPROPERTY` for stiffness, cluster size, and displacement strength in `UXPBDNComponent`**
-
-      6.1.1. [ ] Extend `UXPBDNComponent` with Blueprint-readable properties.
-      6.1.2. [ ] Test visibility in Blueprint editor.
-
-   6.2. [ ] **Create Blueprint nodes for enabling/disabling simulation and adjusting parameters**
-
-      6.2.1. [ ] Add `UFUNCTION(BlueprintCallable)` for `EnableSimulation`, `SetStiffness`.
-      6.2.2. [ ] Build, test node functionality in a Blueprint graph.
-
-   6.3. [ ] **Test Blueprint integration with a sample actor**
-
-      6.3.1. [ ] Create sample actor with `UXPBDNComponent`, adjust params in Blueprint.
-      6.3.2. [ ] Verify changes affect simulation, log outcomes.
-
-7. [ ] **Add basic rendering for soft body mesh**
-
-   7.1. [ ] **Enable Nanite support on `SKM_Quinn.fbx` in Skeletal Mesh Editor**
-
-      7.1.1. [ ] Import `SKM_Quinn.fbx`, enable Nanite in Skeletal Mesh Editor.
-      7.1.2. [ ] Test rendering with default material, verify LOD.
-
-   7.2. [ ] **Create material with Nanite tessellation and displacement for muscle bulging**
-
-      7.2.1. [ ] Create material (`M_XPBDN_Skin`), enable tessellation and displacement.
-      7.2.2. [ ] Add simple displacement (e.g., `BoneWeight * Strength`), test bulging.
-
-   7.3. [ ] **Test rendering performance (~1-3 ms per actor)**
-
-      7.3.1. [ ] Profile with `stat rhi` (~1-3 ms goal).
-      7.3.2. [ ] Adjust tessellation factor, log results.
-
-8. [ ] **Support skeletal mesh deformation**
-
-   8.1. [ ] **Integrate Nanite skeletal animation with XPBD-deformed positions**
-
-      8.1.1. [ ] Link XPBD positions to Nanite mesh in `UXPBDNComponent`.
-      8.1.2. [ ] Test with a simple animation clip, verify sync.
-
-   8.2. [ ] **Add vertex mapping from XPBD results to Nanite mesh in `SkinNanite.hlsl`**
-
-      8.2.1. [ ] Define shader with `StructuredBuffer<float3>` for XPBD positions.
-      8.2.2. [ ] Map to vertex positions, compile and test.
-
-   8.3. [ ] **Test deformation with animation clips from `SKM_Quinn.fbx`**
-
-      8.3.1. [ ] Apply animation from `SKM_Quinn.fbx`, check muscle/skin behavior.
-      8.3.2. [ ] Add logging for vertex offsets, tweak mapping.
-
-9. [ ] **Create unit tests for XPBD solver**
-
-   9.1. [ ] **Write test cases for distance constraints (e.g., stretch resistance)**
-
-      9.1.1. [ ] Create `TestDistanceConstraint` in `XPBDNTest.h/.cpp`.
-      9.1.2. [ ] Test stretch resistance, log pass/fail.
-
-   9.2. [ ] **Test shape-matching clusters for volume preservation**
-
-      9.2.1. [ ] Add `TestShapeMatching`, verify volume preservation.
-      9.2.2. [ ] Run with dummy cluster, check results.
-
-   9.3. [ ] **Automate tests in Unreal’s testing framework**
-
-      9.3.1. [ ] Integrate with Unreal’s `AutomationTest` framework.
-      9.3.2. [ ] Run tests in Editor, ensure all pass.
+- [ ] 9. **Create unit tests for XPBD solver**
+  - [ ] 9.1. **Write test cases for distance constraints (e.g., stretch resistance)**
+    - [ ] 9.1.1. Create `TestDistanceConstraint` in `XPBDNTest.h/.cpp`.
+    - [ ] 9.1.2. Test stretch resistance, log pass/fail.
+  - [ ] 9.2. **Test shape-matching clusters for volume preservation**
+    - [ ] 9.2.1. Add `TestShapeMatching`, verify volume preservation.
+    - [ ] 9.2.2. Run with dummy cluster, check results.
+  - [ ] 9.3. **Automate tests in Unreal’s testing framework**
+    - [ ] 9.3.1. Integrate with Unreal’s `AutomationTest` framework.
+    - [ ] 9.3.2. Run tests in Editor, ensure all pass.
 
 ---
 
@@ -202,48 +148,49 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
   - Collision detection integrates with XPBD constraints for basic response.
 
 - **File Structure**:
-XPBDNPlugin/
-├── Config/
-│   └── DefaultXPBDNPlugin.ini
-├── Source/
-│   └── XPBDNPlugin/
-│       ├── Public/
-│       │   ├── XPBDNComponent.h
-│       │   ├── XPBDNMuscleSolver.h
-│       │   ├── XPBDNConstraint.h
-│       │   ├── XPBDNDistanceConstraint.h
-│       │   ├── XPBDNShaderManager.h
-│       │   ├── XPBDNMeshData.h
-│       │   ├── XPBDNBlueprintLibrary.h
-│       │   └── XPBDNTestSuite.h
-│       └── Private/
-│           ├── XPBDNComponent.cpp
-│           ├── XPBDNMuscleSolver.cpp
-│           ├── XPBDNConstraint.cpp
-│           ├── XPBDNDistanceConstraint.cpp
-│           ├── XPBDNShaderManager.cpp
-│           ├── XPBDNBlueprintLibrary.cpp
-│           └── XPBDNTestSuite.cpp
-├── Shaders/
-│   ├── XPBDCompute.hlsl
-│   └── SkinNanite.hlsl
-└── XPBDNPlugin.uplugin
-
+```
+ XPBDNPlugin/
+  ├── Config/
+  │   └── DefaultXPBDNPlugin.ini
+  ├── Source/
+  │   └── XPBDNPlugin/
+  │       ├── Public/
+  │       │   ├── XPBDNComponent.h
+  │       │   ├── XPBDNMuscleSolver.h
+  │       │   ├── XPBDNConstraint.h
+  │       │   ├── XPBDNDistanceConstraint.h
+  │       │   ├── XPBDNShaderManager.h
+  │       │   ├── XPBDNMeshData.h
+  │       │   ├── XPBDNBlueprintLibrary.h
+  │       │   └── XPBDNTestSuite.h
+  │       └── Private/
+  │           ├── XPBDNComponent.cpp
+  │           ├── XPBDNMuscleSolver.cpp
+  │           ├── XPBDNConstraint.cpp
+  │           ├── XPBDNDistanceConstraint.cpp
+  │           ├── XPBDNShaderManager.cpp
+  │           ├── XPBDNBlueprintLibrary.cpp
+  │           └── XPBDNTestSuite.cpp
+  ├── Shaders/
+  │   ├── XPBDCompute.hlsl
+  │   └── SkinNanite.hlsl
+  └── XPBDNPlugin.uplugin
+```
 
 ---
 
 ## Milestones
 
 1. **Initial Setup**: Project structure, Nanite-enabled mesh rendering (~1 week).
-   - Complete tasks 1.1–1.3 and 7.1 for a functional base.
+ - Complete tasks 1.1–1.3 and 7.1 for a functional base.
 2. **XPBD Prototype**: Working XPBD solver with basic constraints (~2 weeks).
-   - Complete tasks 2.1–2.3 for muscle simulation.
+ - Complete tasks 2.1–2.3 for muscle simulation.
 3. **Component Integration**: `UXPBDNComponent` with Nanite and Blueprint support (~2 weeks).
-   - Complete tasks 3.1–3.3 and 6.1–6.3.
+ - Complete tasks 3.1–3.3 and 6.1–6.3.
 4. **Rendering and Deformation**: Full Nanite tessellation and skeletal deformation (~2 weeks).
-   - Complete tasks 7.2–7.3 and 8.1–8.3.
+ - Complete tasks 7.2–7.3 and 8.1–8.3.
 5. **Optimization and Polish**: Collision, performance tuning, and unit tests (~3 weeks).
-   - Complete tasks 4.1–4.3, 5.1–5.3, and 9.1–9.3.
+ - Complete tasks 4.1–4.3, 5.1–5.3, and 9.1–9.3.
 
 **Total Estimated Time**: ~10 weeks.
 
