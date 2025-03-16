@@ -17,12 +17,10 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
 
 1. [ ] **Setup basic project structure for Unreal Engine 5.5.4 plugin**
 
-   1.1. [ ] **Create new plugin project named `XPBDNPlugin` in UE 5.5.4**
+   1.1 [ ] **Create new plugin project named `XPBDNPlugin` in UE 5.5.4**
 
       1.1.1. [ ] Launch UE 5.5.4 Editor, select “New Plugin” → “Blank Plugin”.
-
       1.1.2. [ ] Name it `XPBDNPlugin`, save to repo folder (e.g., `XPBDNPlugin/Plugins/XPBDNPlugin`).
-
       1.1.3. [ ] Build and compile in Visual Studio, verify plugin loads in Editor.
 
    1.2. [ ] **Configure `.uplugin` file with dependencies (Core, Engine, RenderCore, Nanite)**
