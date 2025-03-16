@@ -15,17 +15,17 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
 
 ## Tasks
 
-- [ ] 1. **Setup basic project structure for Unreal Engine 5.5.4 plugin**
-  - [ ] 1.1. **Create new plugin project named `XPBDNPlugin` in UE 5.5.4**
-    - [ ] 1.1.1. Launch UE 5.5.4 Editor, select “New Plugin” → “Blank Plugin”.
-    - [ ] 1.1.2. Name it `XPBDNPlugin`, save to repo folder (e.g., `XPBDNPlugin/Plugins/XPBDNPlugin`).
-    - [ ] 1.1.3. Build and compile in Visual Studio, verify plugin loads in Editor.
-  - [ ] 1.2. **Configure `.uplugin` file with dependencies (Core, Engine, RenderCore, Nanite)**
-    - [ ] 1.2.1. Edit `XPBDNPlugin.uplugin`, add `"Modules": [{ "Name": "XPBDNPlugin", "Type": "Runtime" }]`.
-    - [ ] 1.2.2. Add dependencies: `"Dependencies": ["Core", "Engine", "RenderCore", "Nanite"]`.
-    - [ ] 1.2.3. Rebuild, test Editor recognizes plugin without errors.
+- [x] 1. **Setup basic project structure for Unreal Engine 5.5.4 plugin**
+  - [x] 1.1. **Create new plugin project named `XPBDNPlugin` in UE 5.5.4**
+    - [x] 1.1.1. Launch UE 5.5.4 Editor, select “New Plugin” → “Blank Plugin”.
+    - [x] 1.1.2. Name it `XPBDNPlugin`, save to repo folder (e.g., `XPBDNPlugin/Plugins/XPBDNPlugin`).
+    - [x] 1.1.3. Build and compile in Visual Studio, verify plugin loads in Editor.
+  - [x] 1.2. **Configure `.uplugin` file with dependencies (Core, Engine, RenderCore)**
+    - [x] 1.2.1. Edit `XPBDNPlugin.uplugin`, add `"Modules": [{ "Name": "XPBDNPlugin", "Type": "Runtime" }]`.
+    - [x] 1.2.2. Add dependencies: `"Dependencies": ["Core", "Engine", "RenderCore"]`.
+    - [x] 1.2.3. Rebuild, test Editor recognizes plugin without errors.
   - [ ] 1.3. **Set up folder structure**
-    - [ ] 1.3.1. Create `Source/XPBDNPlugin/Public` and `Private` folders.
+    - [x] 1.3.1. Create `Source/XPBDNPlugin/Public` and `Private` folders.
     - [ ] 1.3.2. Add `Config` folder with empty `DefaultXPBDNPlugin.ini`.
     - [ ] 1.3.3. Verify structure in VS, rebuild to ensure no path errors.
 
