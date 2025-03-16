@@ -35,6 +35,7 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
   - [x] 1.5. **Enhance configuration support**
     - [x] 1.5.1. Add initial settings to `DefaultXPBDNPlugin.ini` (e.g., `LogVerbosity`).
     - [x] 1.5.2. Read configuration in `XPBDNPlugin.cpp` and log the verbosity setting.
+    - [x] 1.5.3. Update `XPBDNPlugin.cpp` to use explicit path to `DefaultXPBDNPlugin.ini` for reliable config loading.
   - [x] 1.6. **Create a simple test scene**
     - [x] 1.6.1. Add placeholder `UXPBDNComponent.h/.cpp` with logging in `BeginPlay`.
     - [x] 1.6.2. Attach to a test actor in the Editor, verify log output.
@@ -44,11 +45,11 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
     - [x] 1.7.3. Update `XPBDNMuscleSolver.h/.cpp` to include `XPBDNMeshData.h`, rebuild successfully.
 
 - [ ] 2. **Implement XPBD solver for muscle simulation**
-  - [ ] 2.1. **Define lightweight surface constraints (distance, shape-matching) in `XPBDNMuscleSolver.h/.cpp`**
+  - [x] 2.1. **Define lightweight surface constraints (distance, shape-matching) in `XPBDNMuscleSolver.h/.cpp`**
     - [x] 2.1.1. Create `XPBDNMuscleSolver.h` with `TArray<FVector> Positions`, `TArray<int32> Constraints` (moved to `XPBDNMeshData.h`).
-    - [ ] 2.1.2. Implement distance constraint solver in `.cpp` (e.g., `SolveDistanceConstraint`).
-    - [ ] 2.1.3. Add shape-matching logic (e.g., `ComputeShapeMatchGoal`), test with dummy data.
-    - [ ] 2.1.4. Build, log results with `UE_LOG` to verify constraint behavior.
+    - [x] 2.1.2. Implement distance constraint solver in `.cpp` (e.g., `SolveDistanceConstraint`).
+    - [x] 2.1.3. Add shape-matching logic (e.g., `ComputeShapeMatchGoal`), test with dummy data.
+    - [x] 2.1.4. Build, log results with `UE_LOG` to verify constraint behavior.
   - [ ] 2.2. **Create HLSL compute shader (`XPBDCompute.hlsl`) for GPU-accelerated constraint solving**
     - [x] 2.2.1. Define shader with `RWStructuredBuffer<float3>` for positions (placeholder implemented).
     - [ ] 2.2.2. Implement XPBD iteration (e.g., `ComputeCorrection`), compile with `FShaderCompiler`.
@@ -206,6 +207,64 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
   └── XPBDNPlugin.uplugin
 ```
 
+---
+
+## Unreal Coding Notes for UE 5.5.4
+
+### RHI Buffer Management
+- **Buffer Creation**:
+  - Use `RHICreateStructuredBuffer` with `FRHIResourceCreateInfo` instead of raw `FRHIBuffer` or `FRHIBufferCreateDesc`.
+  - Flags: `BUF_Dynamic` for frequently updated buffers (e.g., positions), `BUF_Static` for read-only data (e.g., constraints).
+  - Example: `PositionsBuffer = RHICreateStructuredBuffer(sizeof(FVector), NumElements, BUF_Dynamic | BUF_UnorderedAccess | BUF_ShaderResource, CreateInfo);`
+- **Buffer Updates**:
+  - Avoid `RHILockBuffer` directly; wrap in `ENQUEUE_RENDER_COMMAND` with `FRHICommandListImmediate::LockBuffer`/`UnlockBuffer`.
+  - Example:
+    ```cpp
+    ENQUEUE_RENDER_COMMAND(UpdateBuffer)(
+        [this](FRHICommandListImmediate& RHICmdList)
+        {
+            void* Data = RHICmdList.LockBuffer(Buffer, 0, Size, RLM_WriteOnly);
+            FMemory::Memcpy(Data, SourceData, Size);
+            RHICmdList.UnlockBuffer(Buffer);
+        });
+    ```
+- **Readback**:
+  - Use `FRHIGPUBufferReadback` with `CopyToStagingBuffer` for GPU-to-CPU data transfer.
+  - Sync with `FRenderCommandFence`.
+  - Example:
+    ```cpp
+    RHICmdList.CopyToStagingBuffer(Buffer, Readback, 0, Size);
+    Fence.BeginFence(); Fence.Wait();
+    void* Data = Readback->Lock(Size);
+    FMemory::Memcpy(Dest, Data, Size);
+    Readback->Unlock();
+    ```
+- **Dependencies**:
+  - `.Build.cs`: Include `"Renderer"` instead of deprecated `"ShaderCore"`.
+
+### Structured Buffers
+- **Status**: Not deprecated as of 5.5.4; `RHICreateStructuredBuffer` remains valid (returns `FBufferRHIRef`).
+- **Best Practice**: Use `FRDGBuffer` with RDG for dynamic/static structured buffers.
+  - Example: `GraphBuilder.CreateBuffer(FRDGBufferDesc::CreateStructuredDesc(sizeof(FVector), Num), TEXT("Name"));`
+
+### RDG Compute
+- **Shift from RHI**: Use `FRDGBuilder` for compute tasks over raw `ENQUEUE_RENDER_COMMAND`.
+- **Execution**: Instantiate via `ENQUEUE_RENDER_COMMAND` on render thread.
+  - Example: `ENQUEUE_RENDER_COMMAND(Name)([this](FRHICommandListImmediate& RHICmdList) { FRDGBuilder GraphBuilder(RHICmdList); ...; GraphBuilder.Execute(); });`
+- **Buffers**: Create with `FRDGBufferDesc`, upload via `QueueBufferUpload`.
+- **Shader Dispatch**: Use `AddPass` with `ERDGPassFlags::Compute`.
+  - Convert RDG refs (`FRDGBufferUAVRef`/`FRDGBufferSRVRef`) to RHI refs (`FRHIUnorderedAccessView*`/`FRHIShaderResourceView*`) via `GetRHI()`.
+  - Use `FRHIComputeCommandList::SetComputeShader` and `FRHIBatchedShaderParameters` for binding.
+    - Example: `FRHIBatchedShaderParameters BatchedParams = FRHIBatchedShaderParameters(); SetShaderParameters(BatchedParams, Shader, Params); ComputeCmdList.SetBatchedShaderParameters(ShaderRHI, BatchedParams);`
+- **Readback**: Use `QueueBufferExtraction` with `TRefCountPtr<FRDGPooledBuffer>`, then `FRHIGPUBufferReadback::EnqueueCopy`.
+  - Sync with `BlockUntilGPUIdle()` for simplicity (optimize later).
+
+### RDG Execution
+- **Render Thread**: Instantiate `FRDGBuilder` via `ENQUEUE_RENDER_COMMAND` with `FRHICommandListImmediate`.
+  - Example: `ENQUEUE_RENDER_COMMAND(Name)([this, DeltaTime](FRHICommandListImmediate& RHICmdList) { FRDGBuilder GraphBuilder(RHICmdList); ...; GraphBuilder.Execute(); });`
+- **Readback**: Use `QueueBufferExtraction` with `TRefCountPtr<FRDGPooledBuffer>`, then `FRHIGPUBufferReadback::EnqueueCopy` with offset and size.
+- **Niagara Note**: RDG passes for compute, extraction for readback—no direct `DrawIndirect` needed for XPBD.
+  
 ---
 
 ## Milestones
