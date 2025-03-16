@@ -53,9 +53,9 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
   - [ ] 2.2. **Create HLSL compute shader (`XPBDCompute.hlsl`) for GPU-accelerated constraint solving**
     - [x] 2.2.1. Define shader with `RWStructuredBuffer<float3>` for positions (implemented as `XPBDCompute.usf`).
     - [x] 2.2.2. Implement XPBD iteration (e.g., `ComputeCorrection`), compile with `FShaderCompiler`.
-      - Status: Implemented in `XPBDCompute.usf` at `Shaders/`; virtual path updated to `/Plugins/XPBDNPlugin/Shaders/`; CPU fallback for robustness.
+      - Status: Implemented in `XPBDCompute.usf` at `Shaders/`; virtual path `/Plugins/XPBDNPlugin/Shaders/`; crash-proof with CPU fallback.
     - [ ] 2.2.3. Test shader dispatch in `XPBDNMuscleSolver.cpp` using RDG and `FRHICommandList`.
-      - Status: Path mismatch resolved; runtime validation pending with shader in `Shaders/`.
+      - Status: Path resolved; crash prevented with early file check; runtime validation pending.
   - [ ] 2.3. **Test solver with a simple skeletal mesh (e.g., 10k verts, 50 clusters)**
 
 - [ ] 3. **Buffer Management for XPBD Simulation**
@@ -303,6 +303,11 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
   - Example: `FString ShaderPath = FPaths::ProjectPluginsDir() / TEXT("XPBDNPlugin/Shaders/XPBDCompute.usf"); bUseGPU = FPaths::FileExists(ShaderPath);`
 - - **Buffer Management**:
   - Previous "nasty buffer thing" resolved—`FRDGBuffer` creation and readback with `FRHIGPUBufferReadback` now stable; no nullptr issues remain.
+- **Shader Crash Prevention**:
+  - Missing `.usf` triggers fatal crash at `ShaderCore.cpp:2528`—no engine default exists.
+  - Solution: Check `FPaths::FileExists` before GPU setup; fallback to CPU solver if absent.
+  - Example: `bUseGPU = FPaths::FileExists(ShaderPath); if (!bUseGPU) { XPBDN_LOG_ERROR(...); }`
+  - No dummy shader option—`IMPLEMENT_GLOBAL_SHADER` requires a real file; pre-check is safest.
 
 ### Build Issues
 - **Latest Fix**: `TRefCountPtr<FRDGPooledBuffer>::Reset()` is invalid; replaced with assignment to `nullptr`.

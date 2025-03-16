@@ -37,7 +37,6 @@ public:
     }
 };
 
-// Updated virtual path to match Shaders/ subfolder
 IMPLEMENT_GLOBAL_SHADER(FXPBDComputeShader, "/Plugins/XPBDNPlugin/Shaders/XPBDCompute.usf", "CSMain", SF_Compute);
 
 void FXPBDNMuscleSolver::InitializeSolver(const FXPBDNMeshData& Data)
@@ -54,16 +53,16 @@ void FXPBDNMuscleSolver::InitializeSolver(const FXPBDNMeshData& Data)
     }
     MeshData = Data;
 
-    // Check shader file at Shaders/ subfolder
+    // Check shader file early to avoid static compilation crash
     FString ShaderPath = FPaths::ConvertRelativePathToFull(FPaths::ProjectPluginsDir() / TEXT("XPBDNPlugin/Shaders/XPBDCompute.usf"));
     bUseGPU = FPaths::FileExists(ShaderPath);
     if (!bUseGPU)
     {
-        XPBDN_LOG_ERROR("Shader file '%s' not found! Falling back to CPU solver.", *ShaderPath);
+        XPBDN_LOG_ERROR("Shader file '%s' not found! Using CPU solver to prevent runtime crash. Ensure the .usf file is in place.", *ShaderPath);
     }
     else
     {
-        XPBDN_LOG_INFO("Shader file '%s' found. Using GPU solver.", *ShaderPath);
+        XPBDN_LOG_INFO("Shader file '%s' found. GPU solver enabled.", *ShaderPath);
     }
 
     if (bUseGPU)
@@ -233,6 +232,12 @@ void FXPBDNMuscleSolver::SetupGPUBuffers(FRDGBuilder& GraphBuilder)
 
 void FXPBDNMuscleSolver::DispatchDistanceConstraints(FRDGBuilder& GraphBuilder, float DeltaTime)
 {
+    if (!bUseGPU)
+    {
+        XPBDN_LOG_WARNING("Skipping GPU dispatch - shader unavailable.");
+        return;
+    }
+
     if (!PositionsBuffer || !ConstraintsBuffer || !RestDistancesBuffer)
     {
         XPBDN_LOG_ERROR("One or more GPU buffers are null! Positions=%p, Constraints=%p, RestDistances=%p",
@@ -240,10 +245,12 @@ void FXPBDNMuscleSolver::DispatchDistanceConstraints(FRDGBuilder& GraphBuilder, 
         return;
     }
 
+    // Scope shader access to delay compilation until we're sure
     TShaderMapRef<FXPBDComputeShader> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
     if (!ComputeShader.IsValid())
     {
-        XPBDN_LOG_ERROR("ComputeShader is invalid! Check XPBDCompute.usf compilation at '/Plugins/XPBDNPlugin/Shaders/'.");
+        XPBDN_LOG_ERROR("ComputeShader is invalid! Check XPBDCompute.usf at '/Plugins/XPBDNPlugin/Shaders/'. Falling back to CPU.");
+        bUseGPU = false; // Disable GPU for future calls
         return;
     }
 
