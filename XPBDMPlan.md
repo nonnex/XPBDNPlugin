@@ -24,10 +24,10 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
     - [x] 1.2.1. Edit `XPBDNPlugin.uplugin`, add `"Modules": [{ "Name": "XPBDNPlugin", "Type": "Runtime" }]`.
     - [x] 1.2.2. Add dependencies: `"Dependencies": ["Core", "Engine", "RenderCore"]`.
     - [x] 1.2.3. Rebuild, test Editor recognizes plugin without errors.
-  - [ ] 1.3. **Set up folder structure**
+  - [x] 1.3. **Set up folder structure**
     - [x] 1.3.1. Create `Source/XPBDNPlugin/Public` and `Private` folders.
-    - [ ] 1.3.2. Add `Config` folder with empty `DefaultXPBDNPlugin.ini`.
-    - [ ] 1.3.3. Verify structure in VS, rebuild to ensure no path errors.
+    - [x] 1.3.2. Add `Config` folder with empty `DefaultXPBDNPlugin.ini`.
+    - [x] 1.3.3. Verify structure in VS, rebuild to ensure no path errors.
 
 - [ ] 2. **Implement XPBD solver for muscle simulation**
   - [ ] 2.1. **Define lightweight surface constraints (distance, shape-matching) in `XPBDNMuscleSolver.h/.cpp`**
@@ -165,6 +165,7 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
   ├── Source/
   │   └── XPBDNPlugin/
   │       ├── Public/
+  │           ├── XPBDNPlugin.h
   │       │   ├── XPBDNComponent.h
   │       │   ├── XPBDNMuscleSolver.h
   │       │   ├── XPBDNConstraint.h
@@ -174,6 +175,7 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
   │       │   ├── XPBDNBlueprintLibrary.h
   │       │   └── XPBDNTestSuite.h
   │       └── Private/
+  │           ├── XPBDNPlugin.cpp
   │           ├── XPBDNComponent.cpp
   │           ├── XPBDNMuscleSolver.cpp
   │           ├── XPBDNConstraint.cpp
