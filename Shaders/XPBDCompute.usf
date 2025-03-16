@@ -1,37 +1,31 @@
-// Plugins/XPBDNPlugin/Shaders/XPBDCompute.usf
+#include "/Engine/Public/HlslBaseTypes.ush"
+
 RWStructuredBuffer<float3> Positions : register(u0);
 StructuredBuffer<int2> Constraints : register(t0);
-StructuredBuffer<float> RestDistances : register(t1);
-
-cbuffer Parameters : register(b0)
-{
-    float Stiffness;
-    float DeltaTime;
-    uint NumConstraints;
-    uint NumParticles;
-};
+StructuredBuffer<float> RestLengths : register(t1);
 
 [numthreads(64, 1, 1)]
-void CSMain(uint3 DTid : SV_DispatchThreadID)
+void MainCS(uint3 DTid : SV_DispatchThreadID)
 {
-    uint ConstraintIdx = DTid.x;
-    if (ConstraintIdx >= NumConstraints)
+    uint idx = DTid.x;
+    uint constraintCount;
+    Constraints.GetDimensions(constraintCount);
+    if (idx >= constraintCount)
         return;
 
-    int2 Constraint = Constraints[ConstraintIdx];
-    float RestDistance = RestDistances[ConstraintIdx];
+    int2 Constraint = Constraints[idx];
+    float RestLength = RestLengths[idx];
 
     float3 P1 = Positions[Constraint.x];
     float3 P2 = Positions[Constraint.y];
     float3 Delta = P2 - P1;
-    float CurrentDistance = length(Delta);
+    float CurrentLength = length(Delta);
 
-    if (CurrentDistance > 0.0f)
+    if (CurrentLength > 0.0f)
     {
-        float Correction = (CurrentDistance - RestDistance) * Stiffness * DeltaTime;
-        float3 CorrectionVector = normalize(Delta) * (Correction * 0.5f);
-        
-        Positions[Constraint.x] -= CorrectionVector;
-        Positions[Constraint.y] += CorrectionVector;
+        float Correction = (CurrentLength - RestLength) * 0.5f;
+        float3 CorrectionVector = normalize(Delta) * Correction;
+        Positions[Constraint.x] += CorrectionVector;
+        Positions[Constraint.y] -= CorrectionVector;
     }
 }

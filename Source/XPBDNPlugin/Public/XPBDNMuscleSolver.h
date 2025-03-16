@@ -1,28 +1,32 @@
-// XPBDNMuscleSolver.h
 #pragma once
 
 #include "CoreMinimal.h"
+#include "XPBDNShaderManager.h"
 #include "XPBDNMeshData.h"
-#include "XPBDNPlugin.h"
 #include "RenderGraphResources.h"
+#include "XPBDNPlugin.h"
 
 class FXPBDNMuscleSolver
 {
 public:
-    FXPBDNMuscleSolver() : PositionsBuffer(nullptr), ConstraintsBuffer(nullptr), RestDistancesBuffer(nullptr), bUseGPU(false) {}
-    void InitializeSolver(const FXPBDNMeshData& Data);
-    void SolveConstraints(FRDGBuilder& GraphBuilder, float DeltaTime);
-    void SolveDistanceConstraint(int32 ConstraintIdx, float Stiffness, float DeltaTime); // CPU fallback
+    FXPBDNMuscleSolver();
+    ~FXPBDNMuscleSolver();
+
+    void Initialize();
+    void SetupGPUBuffers(FRHICommandListImmediate& RHICmdList);
+    void Solve(FRHICommandListImmediate& RHICmdList, float DeltaTime);
 
 private:
-    void DispatchShader();
-    void SetupGPUBuffers(FRDGBuilder& GraphBuilder);
-    void DispatchDistanceConstraints(FRDGBuilder& GraphBuilder, float DeltaTime);
+    void SolveDistanceConstraint(); // CPU fallback
 
-    FXPBDNMeshData MeshData;
-    FRDGBuffer* PositionsBuffer;
-    FRDGBuffer* ConstraintsBuffer;
-    FRDGBuffer* RestDistancesBuffer;
-    TRefCountPtr<FRDGPooledBuffer> PositionsPooledBuffer;
-    bool bUseGPU; // Toggle GPU/CPU based on shader availability
+    TArray<FVector> Positions;
+    TArray<FIntPoint> Constraints;
+    TArray<float> RestLengths;
+
+    TRefCountPtr<FRDGPooledBuffer> PositionsBuffer;
+    TRefCountPtr<FRDGPooledBuffer> ConstraintsBuffer;
+    TRefCountPtr<FRDGPooledBuffer> RestLengthsBuffer;
+
+    FXPBDNShaderManager ShaderManager;
+    bool bUseGPU;
 };
