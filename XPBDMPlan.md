@@ -66,9 +66,23 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
   - [ ] 4.2. **Test collision with a simple scene (e.g., sphere vs. floor)**
     - [ ] 4.2.1. Create scene with cube (soft body) and floor (static).
     - [ ] 4.2.2. Run simulation, log collision points, tweak stiffness.
-  - [ ] 4.3. **Explore GPU-accelerated collision queries using Nanite data (future optimization)**
-    - [ ] 4.3.1. Research Nanite’s BVH access (if exposed in 5.5.4).
-    - [ ] 4.3.2. Prototype compute shader for collision queries (future task).
+ - [ ] 4.3. **Implement GPU-accelerated XPBD collision clusters using compute shaders**
+    - [ ] 4.3.1. Create UAV buffers for XPBD positions and collision clusters using `FRHIBufferCreateDesc`.
+    - [ ] 4.3.2. Extend `XPBDCompute.hlsl` with broad-phase (spatial hash) and narrow-phase collision.
+    - [ ] 4.3.3. Dispatch via `FRHIComputeCommandList` with `RHIDispatchComputeShader`, target ~1-3 ms/actor.
+    - [ ] 4.3.4. Sync with `RHIThreadFence()` before Nanite WPO update.
+  - [ ] 4.4. **Create dynamic collision proxy updated with XPBD and morphs**
+    - [ ] 4.4.1. Generate a low-poly proxy (1k-5k verts) from `SKM_Quinn.fbx`.
+    - [ ] 4.4.2. Update proxy vertices in `TickComponent` with XPBD offsets and `MorphBlendWeight`.
+    - [ ] 4.4.3. Integrate with PhysX/Chaos, test against Nanite-rendered mesh.
+  - [ ] 4.5. **Implement hybrid XPBD-Chaos Cloth collision for clothing simulation**
+    - [ ] 4.5.1. Set up Chaos Cloth for a clothing mesh, driven by Niagara.
+    - [ ] 4.5.2. Add GPU collision pass in `XPBDCompute.hlsl` between cloth and XPBD body.
+    - [ ] 4.5.3. Test cloth-body interaction, optimize for 60 FPS.
+  - [ ] 4.6. **Prototype ray tracing-based collision using Nanite’s dynamic geometries**
+    - [ ] 4.6.1. Build `FRayTracingGeometry` from Nanite clusters (needs `NaniteSceneProxy.cpp`).
+    - [ ] 4.6.2. Dispatch ray tracing shader via `FRHICommandList`, cast rays from XPBD verts.
+    - [ ] 4.6.3. Compare performance (~5 ms?) vs. cluster approach, decide viability.
 
 - [ ] 5. **Optimize simulation performance**
   - [ ] 5.1. **Reduce constraint count via clustering (e.g., 50-100 clusters per actor)**
@@ -104,12 +118,8 @@ This document outlines the development plan for the XPBDN (Extended Position-Bas
     - [ ] 7.3.2. Adjust tessellation factor, log results.
 
 - [ ] 8. **Support skeletal mesh deformation**
-  - [ ] 8.1. **Integrate Nanite skeletal animation with XPBD-deformed positions**
-    - [ ] 8.1.1. Link XPBD positions to Nanite mesh in `UXPBDNComponent`.
-    - [ ] 8.1.2. Test with a simple animation clip, verify sync.
-  - [ ] 8.2. **Add vertex mapping from XPBD results to Nanite mesh in `SkinNanite.hlsl`**
-    - [ ] 8.2.1. Define shader with `StructuredBuffer<float3>` for XPBD positions.
-    - [ ] 8.2.2. Map to vertex positions, compile and test.
+  - [ ] 8.1. Update XPBD positions in GPU buffer, bind as UAV to `SkinNanite.hlsl`.
+  - [ ] 8.2. Use `FRHICommandList` to enqueue shader updates, sync with `FinishRecording()`.
   - [ ] 8.3. **Test deformation with animation clips from `SKM_Quinn.fbx`**
     - [ ] 8.3.1. Apply animation from `SKM_Quinn.fbx`, check muscle/skin behavior.
     - [ ] 8.3.2. Add logging for vertex offsets, tweak mapping.
